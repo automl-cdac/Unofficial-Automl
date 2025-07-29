@@ -15,3 +15,13 @@ frontend/webapp/public
 backend/backend_venv
 langgraph_agent/langgraph_env
 frontend/react_dashboard/node_modules
+backend/django_api/__pycache__
+backend/ingestion/__pycache__
+backend/modeling/__pycache__
+backend/modeling/migrations/__pycache__
+backend/reporting/__pycache__
+backend/users/__pycache__
+backend/ingestion/migrations/__pycache__
+
+backend/preprocessing/migrations/__pycache__
+backend/reporting/migrations/__pycache__
