@@ -17,14 +17,16 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
-from .views import hello_world
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
-    path('', hello_world),
+    path('admin/', admin.site.urls),
+    path('api/ingestion/', include('ingestion.urls')),
+    path('api/modeling/', include('modeling.urls')),
     path('api/reporting/', include('reporting.urls')),
-#     path('api/modeling/', include('modeling.urls')),
-#     path('api/preprocessing/', include('preprocessing.urls')),
-#     path('api/ingestion/', include('ingestion.urls')),
-#     path('api/users/', include('users.urls')),
-#     path('admin/', admin.site.urls),
 ]
+
+# Serve media files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
