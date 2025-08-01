@@ -14,6 +14,7 @@ function Dashboard() {
   const [reports, setReports] = useState([]);
   const [selectedDataset, setSelectedDataset] = useState(null);
   const [selectedModel, setSelectedModel] = useState(null);
+  const [selectedReport, setSelectedReport] = useState(null);
   const [activeTab, setActiveTab] = useState('datasets');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

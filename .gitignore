@@ -12,6 +12,7 @@ langgraph_agent/__pycache__
 datascience_engine/__pycache__
 frontend/webapp/public
 
+backend/.backend_venv
 backend/backend_venv
 langgraph_agent/langgraph_env
 frontend/react_dashboard/node_modules
@@ -23,6 +24,8 @@ backend/reporting/__pycache__
 backend/users/__pycache__
 backend/ingestion/migrations/__pycache__
 
+
+backend/preprocessing/__pycache__
 backend/preprocessing/migrations/__pycache__
 backend/reporting/migrations/__pycache__
 
