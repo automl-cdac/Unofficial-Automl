@@ -13,6 +13,7 @@ function EDAView({ dataset, onClose, onTrainModel, onCompareModels }) {
   const [showCompareForm, setShowCompareForm] = useState(false);
   const [intelligentSuggestions, setIntelligentSuggestions] = useState(null);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [problemType, setProblemType] = useState('classification'); // Default to classification
 
   useEffect(() => {
     fetchDatasetDetails();
@@ -23,6 +24,13 @@ function EDAView({ dataset, onClose, onTrainModel, onCompareModels }) {
       fetchIntelligentSuggestions();
     }
   }, [targetColumn]);
+
+  // Set the AI-recommended model as default when suggestions are loaded
+  useEffect(() => {
+    if (intelligentSuggestions?.final_recommendation?.best_model) {
+      setSelectedModel(intelligentSuggestions.final_recommendation.best_model);
+    }
+  }, [intelligentSuggestions]);
 
   const fetchDatasetDetails = async () => {
     try {
@@ -42,6 +50,7 @@ function EDAView({ dataset, onClose, onTrainModel, onCompareModels }) {
     try {
       const response = await axios.get(`${API_BASE_URL}/modeling/suggestions/${dataset.id}/`);
       setIntelligentSuggestions(response.data.intelligent_suggestions);
+      setProblemType(response.data.problem_type || 'classification');
     } catch (error) {
       console.error('Error fetching intelligent suggestions:', error);
     } finally {
@@ -66,6 +75,38 @@ function EDAView({ dataset, onClose, onTrainModel, onCompareModels }) {
     const selectedModels = ['random_forest', 'xgboost', 'lightgbm'];
     onCompareModels(dataset.id, selectedModels, targetColumn);
     onClose();
+  };
+
+  const getModelsForProblemType = (type) => {
+    const classificationModels = [
+      { value: 'random_forest', label: 'Random Forest' },
+      { value: 'xgboost', label: 'XGBoost' },
+      { value: 'lightgbm', label: 'LightGBM' },
+      { value: 'catboost', label: 'CatBoost' },
+      { value: 'logistic_regression', label: 'Logistic Regression' },
+      { value: 'svm', label: 'Support Vector Machine' },
+      { value: 'knn', label: 'K-Nearest Neighbors' },
+      { value: 'decision_tree', label: 'Decision Tree' },
+      { value: 'gradient_boosting', label: 'Gradient Boosting' },
+      { value: 'ada_boost', label: 'AdaBoost' }
+    ];
+
+    const regressionModels = [
+      { value: 'random_forest', label: 'Random Forest' },
+      { value: 'xgboost', label: 'XGBoost' },
+      { value: 'lightgbm', label: 'LightGBM' },
+      { value: 'catboost', label: 'CatBoost' },
+      { value: 'linear_regression', label: 'Linear Regression' },
+      { value: 'ridge', label: 'Ridge Regression' },
+      { value: 'lasso', label: 'Lasso Regression' },
+      { value: 'elastic_net', label: 'Elastic Net' },
+      { value: 'svm', label: 'Support Vector Regression' },
+      { value: 'knn', label: 'K-Nearest Neighbors' },
+      { value: 'decision_tree', label: 'Decision Tree' },
+      { value: 'gradient_boosting', label: 'Gradient Boosting' }
+    ];
+
+    return type === 'regression' ? regressionModels : classificationModels;
   };
 
   if (loading) {
@@ -131,7 +172,14 @@ function EDAView({ dataset, onClose, onTrainModel, onCompareModels }) {
               <h3>Model Training</h3>
               
               <div className="form-group">
-                <label>Target Column:</label>
+                <label>
+                  Target Column:
+                  {problemType && (
+                    <span className={`problem-type-indicator ${problemType}`}>
+                      {problemType}
+                    </span>
+                  )}
+                </label>
                 <input
                   type="text"
                   value={targetColumn}
@@ -204,12 +252,21 @@ function EDAView({ dataset, onClose, onTrainModel, onCompareModels }) {
                   onChange={(e) => setSelectedModel(e.target.value)}
                 >
                   <option value="">Select a model</option>
-                  <option value="random_forest">Random Forest</option>
-                  <option value="xgboost">XGBoost</option>
-                  <option value="lightgbm">LightGBM</option>
-                  <option value="logistic_regression">Logistic Regression</option>
-                  <option value="svm">Support Vector Machine</option>
+                  
+                  {getModelsForProblemType(problemType).map((model) => (
+                    <option key={model.value} value={model.value}>
+                      {model.label}
+                    </option>
+                  ))}
                 </select>
+                <small>
+                  Showing {problemType} models based on your target column
+                  {intelligentSuggestions?.final_recommendation?.best_model === selectedModel && (
+                    <span style={{color: '#27ae60', fontWeight: 'bold'}}>
+                      {' '}• AI Recommended
+                    </span>
+                  )}
+                </small>
               </div>
 
               <div className="form-actions">
