@@ -23,6 +23,7 @@ function ChartDashboard({ model, onClose }) {
       const response = await axios.get(`${API_BASE_URL}/modeling/models/${model.id}/metrics/`);
       
       if (response.data && response.data.metrics) {
+        console.log('Received model metrics:', response.data.metrics);
         setModelMetrics(response.data.metrics);
       } else {
         // Fallback to mock data if API doesn't return expected format
@@ -139,32 +140,58 @@ function ChartDashboard({ model, onClose }) {
   };
 
   const renderConfusionMatrix = (matrix) => {
-    if (!matrix) return <p>Confusion matrix data not available</p>;
+    if (!matrix) {
+      return <p>Confusion matrix data not available</p>;
+    }
+
+    // Handle different data formats
+    let cm = matrix;
     
-    const total = matrix.true_negatives + matrix.false_positives + matrix.false_negatives + matrix.true_positives;
+    if (typeof matrix === 'object' && matrix.true_negatives !== undefined) {
+      // If it's already in the expected format
+      cm = matrix;
+    } else if (Array.isArray(matrix) && matrix.length >= 2) {
+      // If it's a 2D array from sklearn confusion_matrix
+      if (matrix[0].length >= 2) {
+        cm = {
+          true_negatives: matrix[0][0] || 0,
+          false_positives: matrix[0][1] || 0,
+          false_negatives: matrix[1][0] || 0,
+          true_positives: matrix[1][1] || 0
+        };
+      }
+    } else {
+      return <p>Confusion matrix data format not recognized</p>;
+    }
+
+    const total = cm.true_negatives + cm.false_positives + cm.false_negatives + cm.true_positives;
+    
+    if (total === 0) {
+      return <p>Confusion matrix data is empty</p>;
+    }
     
     return (
       <div className="confusion-matrix">
         <div className="matrix-grid">
           <div className="matrix-cell tn">
-            <div className="cell-value">{matrix.true_negatives}</div>
+            <div className="cell-value">{cm.true_negatives}</div>
             <div className="cell-label">True Negatives</div>
-            <div className="cell-percentage">{((matrix.true_negatives / total) * 100).toFixed(1)}%</div>
+            <div className="cell-percentage">{((cm.true_negatives / total) * 100).toFixed(1)}%</div>
           </div>
           <div className="matrix-cell fp">
-            <div className="cell-value">{matrix.false_positives}</div>
+            <div className="cell-value">{cm.false_positives}</div>
             <div className="cell-label">False Positives</div>
-            <div className="cell-percentage">{((matrix.false_positives / total) * 100).toFixed(1)}%</div>
+            <div className="cell-percentage">{((cm.false_positives / total) * 100).toFixed(1)}%</div>
           </div>
           <div className="matrix-cell fn">
-            <div className="cell-value">{matrix.false_negatives}</div>
+            <div className="cell-value">{cm.false_negatives}</div>
             <div className="cell-label">False Negatives</div>
-            <div className="cell-percentage">{((matrix.false_negatives / total) * 100).toFixed(1)}%</div>
+            <div className="cell-percentage">{((cm.false_negatives / total) * 100).toFixed(1)}%</div>
           </div>
           <div className="matrix-cell tp">
-            <div className="cell-value">{matrix.true_positives}</div>
+            <div className="cell-value">{cm.true_positives}</div>
             <div className="cell-label">True Positives</div>
-            <div className="cell-percentage">{((matrix.true_positives / total) * 100).toFixed(1)}%</div>
+            <div className="cell-percentage">{((cm.true_positives / total) * 100).toFixed(1)}%</div>
           </div>
         </div>
       </div>
@@ -172,13 +199,36 @@ function ChartDashboard({ model, onClose }) {
   };
 
   const renderFeatureImportance = (features) => {
-    if (!features || features.length === 0) {
+    if (!features) {
       return <p>Feature importance data not available</p>;
+    }
+
+    // Handle different data formats from API
+    let featureArray = [];
+    
+    if (Array.isArray(features)) {
+      // If it's already an array of objects with feature and importance
+      featureArray = features;
+    } else if (typeof features === 'object' && features !== null) {
+      // If it's an object with feature names as keys and importance as values
+      featureArray = Object.entries(features).map(([feature, importance]) => ({
+        feature: feature,
+        importance: typeof importance === 'number' ? importance : parseFloat(importance) || 0
+      }));
+    } else {
+      return <p>Feature importance data format not recognized</p>;
+    }
+
+    // Sort by importance (descending)
+    featureArray.sort((a, b) => b.importance - a.importance);
+
+    if (featureArray.length === 0) {
+      return <p>No feature importance data available</p>;
     }
 
     return (
       <div className="feature-importance">
-        {features.map((feature, index) => (
+        {featureArray.map((feature, index) => (
           <div key={index} className="feature-bar">
             <div className="feature-name">{feature.feature}</div>
             <div className="feature-bar-container">
@@ -195,14 +245,33 @@ function ChartDashboard({ model, onClose }) {
   };
 
   const renderROCCurve = (rocData) => {
-    if (!rocData || !rocData.fpr || !rocData.tpr) {
+    if (!rocData) {
       return <p>ROC curve data not available</p>;
     }
 
+    // Handle different data formats
+    let fpr, tpr;
+    
+    if (rocData.fpr && rocData.tpr) {
+      fpr = Array.isArray(rocData.fpr) ? rocData.fpr : [];
+      tpr = Array.isArray(rocData.tpr) ? rocData.tpr : [];
+    } else if (Array.isArray(rocData)) {
+      // If rocData is an array of points
+      const points = rocData;
+      fpr = points.map(p => p.fpr || p.x || 0);
+      tpr = points.map(p => p.tpr || p.y || 0);
+    } else {
+      return <p>ROC curve data format not recognized</p>;
+    }
+
+    if (fpr.length === 0 || tpr.length === 0) {
+      return <p>ROC curve data is empty</p>;
+    }
+
     // Create a simple ROC curve visualization using CSS
-    const points = rocData.fpr.map((fpr, i) => ({
-      x: fpr * 100,
-      y: rocData.tpr[i] * 100
+    const points = fpr.map((fpr_val, i) => ({
+      x: fpr_val * 100,
+      y: tpr[i] * 100
     }));
 
     return (
@@ -506,15 +575,41 @@ function ChartDashboard({ model, onClose }) {
               </div>
               <div className="feature-insights">
                 <h4>Key Insights</h4>
-                {modelMetrics?.feature_importance && modelMetrics.feature_importance.length > 0 ? (
-                  <ul>
-                    <li><strong>Top Feature:</strong> {modelMetrics.feature_importance[0].feature} contributes {(modelMetrics.feature_importance[0].importance * 100).toFixed(1)}% to predictions</li>
-                    <li><strong>Top 3 Features:</strong> Account for {((modelMetrics.feature_importance[0].importance + modelMetrics.feature_importance[1].importance + modelMetrics.feature_importance[2].importance) * 100).toFixed(1)}% of total importance</li>
-                    <li><strong>Feature Count:</strong> {modelMetrics.feature_importance.length} features analyzed</li>
-                  </ul>
-                ) : (
-                  <p>Feature importance data not available</p>
-                )}
+                {(() => {
+                  // Process feature importance data to get insights
+                  const features = modelMetrics?.feature_importance;
+                  if (!features) {
+                    return <p>Feature importance data not available</p>;
+                  }
+
+                  let featureArray = [];
+                  if (Array.isArray(features)) {
+                    featureArray = features;
+                  } else if (typeof features === 'object' && features !== null) {
+                    featureArray = Object.entries(features).map(([feature, importance]) => ({
+                      feature: feature,
+                      importance: typeof importance === 'number' ? importance : parseFloat(importance) || 0
+                    }));
+                  }
+
+                  if (featureArray.length === 0) {
+                    return <p>No feature importance data available</p>;
+                  }
+
+                  // Sort by importance (descending)
+                  featureArray.sort((a, b) => b.importance - a.importance);
+
+                  const topFeature = featureArray[0];
+                  const top3Importance = featureArray.slice(0, 3).reduce((sum, f) => sum + f.importance, 0);
+
+                  return (
+                    <ul>
+                      <li><strong>Top Feature:</strong> {topFeature.feature} contributes {(topFeature.importance * 100).toFixed(1)}% to predictions</li>
+                      <li><strong>Top 3 Features:</strong> Account for {(top3Importance * 100).toFixed(1)}% of total importance</li>
+                      <li><strong>Feature Count:</strong> {featureArray.length} features analyzed</li>
+                    </ul>
+                  );
+                })()}
               </div>
             </div>
           </div>
