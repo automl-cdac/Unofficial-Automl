@@ -9,6 +9,7 @@ import json
 import os
 from datetime import datetime
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_curve, precision_recall_curve
 from .models import MLModel, ModelEvaluation, ModelComparison
 from ingestion.models import Dataset
 from preprocessing.models import PreprocessedDataset
@@ -70,6 +71,35 @@ def train_model(request):
         # Evaluate model
         metrics = ml_service.evaluate_model(trained_model, X_test, y_test, problem_type)
         
+        # Get predictions for additional metrics
+        y_pred = trained_model.predict(X_test)
+        y_pred_proba = None
+        if hasattr(trained_model, 'predict_proba'):
+            y_pred_proba = trained_model.predict_proba(X_test)
+        
+        # Calculate additional metrics
+        additional_metrics = {}
+        
+        if problem_type == 'classification':
+            # Confusion matrix details
+            from sklearn.metrics import confusion_matrix
+            cm = confusion_matrix(y_test, y_pred)
+            if len(cm) == 2:
+                additional_metrics['confusion_matrix'] = {
+                    'true_negatives': int(cm[0, 0]),
+                    'false_positives': int(cm[0, 1]),
+                    'false_negatives': int(cm[1, 0]),
+                    'true_positives': int(cm[1, 1])
+                }
+            
+            # ROC curve data
+            if y_pred_proba is not None and len(np.unique(y_test)) == 2:
+                fpr, tpr, _ = roc_curve(y_test, y_pred_proba[:, 1])
+                additional_metrics['roc_curve'] = {
+                    'fpr': fpr.tolist(),
+                    'tpr': tpr.tolist()
+                }
+        
         # Cross-validation
         cv_results = ml_service.cross_validate_model(trained_model, X, y)
         
@@ -87,18 +117,21 @@ def train_model(request):
         model.status = 'completed'
         model.save()
         
-        # Create evaluation record
-        evaluation = ModelEvaluation.objects.create(
-            model=model,
+        # Create evaluation record with comprehensive metrics
+        evaluation_data = {
+            'model': model,
             **metrics,
-            cv_scores=cv_results['scores'],
-            cv_mean=cv_results['mean'],
-            cv_std=cv_results['std'],
-            feature_importance=feature_importance
-        )
+            'cv_scores': cv_results['scores'],
+            'cv_mean': cv_results['mean'],
+            'cv_std': cv_results['std'],
+            'feature_importance': feature_importance,
+            **additional_metrics
+        }
+        
+        evaluation = ModelEvaluation.objects.create(**evaluation_data)
         
         # Generate charts
-        charts = ml_service.generate_charts(df, target_column, trained_model, y_test, trained_model.predict(X_test))
+        charts = ml_service.generate_charts(df, target_column, trained_model, y_test, y_pred)
         
         return Response({
             'model_id': model.id,
@@ -113,6 +146,56 @@ def train_model(request):
         
     except Dataset.DoesNotExist:
         return Response({'error': 'Dataset not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+def get_model_metrics(request, model_id):
+    """Get comprehensive model metrics for the dashboard"""
+    try:
+        model = MLModel.objects.get(id=model_id)
+        evaluation = ModelEvaluation.objects.filter(model=model).first()
+        
+        if not evaluation:
+            return Response({'error': 'No evaluation found for this model'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Determine if it's classification or regression
+        is_classification = model.model_type.lower() in [
+            'classification', 'logistic', 'svm', 'knn', 'decision_tree', 
+            'random_forest', 'gradient_boosting', 'ada_boost', 'catboost',
+            'xgboost', 'lightgbm', 'neural_network'
+        ]
+        
+        # Prepare metrics based on problem type
+        if is_classification:
+            metrics = {
+                'accuracy': evaluation.accuracy,
+                'precision': evaluation.precision,
+                'recall': evaluation.recall,
+                'f1_score': evaluation.f1_score,
+                'auc_roc': evaluation.roc_auc,
+                'confusion_matrix': evaluation.confusion_matrix,
+                'roc_curve': getattr(evaluation, 'roc_curve', None),
+                'feature_importance': evaluation.feature_importance
+            }
+        else:
+            metrics = {
+                'mse': evaluation.mse,
+                'rmse': np.sqrt(evaluation.mse) if evaluation.mse else None,
+                'mae': evaluation.mae,
+                'r2_score': evaluation.r2_score,
+                'explained_variance': evaluation.r2_score,  # Using R² as proxy
+                'feature_importance': evaluation.feature_importance
+            }
+        
+        return Response({
+            'metrics': metrics,
+            'model_type': model.model_type,
+            'problem_type': 'classification' if is_classification else 'regression'
+        }, status=status.HTTP_200_OK)
+        
+    except MLModel.DoesNotExist:
+        return Response({'error': 'Model not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

@@ -15,7 +15,7 @@ function Dashboard() {
   const [selectedDataset, setSelectedDataset] = useState(null);
   const [selectedModel, setSelectedModel] = useState(null);
   const [selectedReport, setSelectedReport] = useState(null);
-  const [activeTab, setActiveTab] = useState('datasets');
+  const [activeTab, setActiveTab] = useState('upload');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -173,6 +173,12 @@ function Dashboard() {
 
       <nav className="dashboard-nav">
         <button
+          className={activeTab === 'upload' ? 'active' : ''}
+          onClick={() => setActiveTab('upload')}
+        >
+          Upload Dataset
+        </button>
+        <button
           className={activeTab === 'datasets' ? 'active' : ''}
           onClick={() => setActiveTab('datasets')}
         >
@@ -193,11 +199,23 @@ function Dashboard() {
       </nav>
 
       <main className="dashboard-content">
+        {activeTab === 'upload' && (
+          <div className="upload-section">
+            <div className="section-header">
+              <h2>Upload Dataset</h2>
+              <p>Upload your dataset and configure target column</p>
+            </div>
+            
+            <div className="upload-container">
+              <FileUploader onUpload={handleDatasetUpload} />
+            </div>
+          </div>
+        )}
+
         {activeTab === 'datasets' && (
           <div className="datasets-section">
             <div className="section-header">
               <h2>Data Management</h2>
-              <FileUploader onUpload={handleDatasetUpload} />
             </div>
             
             <div className="datasets-grid">

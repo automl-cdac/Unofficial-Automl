@@ -36,6 +36,11 @@ function EDAView({ dataset, onClose, onTrainModel, onCompareModels }) {
     try {
       const response = await axios.get(`${API_BASE_URL}/ingestion/datasets/${dataset.id}/`);
       setDatasetDetails(response.data);
+      
+      // Set problem type from dataset if available
+      if (response.data.dataset.problem_type) {
+        setProblemType(response.data.dataset.problem_type.toLowerCase());
+      }
     } catch (error) {
       console.error('Error fetching dataset details:', error);
     } finally {
@@ -50,7 +55,11 @@ function EDAView({ dataset, onClose, onTrainModel, onCompareModels }) {
     try {
       const response = await axios.get(`${API_BASE_URL}/modeling/suggestions/${dataset.id}/`);
       setIntelligentSuggestions(response.data.intelligent_suggestions);
-      setProblemType(response.data.problem_type || 'classification');
+      
+      // Update problem type from suggestions if available
+      if (response.data.problem_type) {
+        setProblemType(response.data.problem_type.toLowerCase());
+      }
     } catch (error) {
       console.error('Error fetching intelligent suggestions:', error);
     } finally {
@@ -72,7 +81,10 @@ function EDAView({ dataset, onClose, onTrainModel, onCompareModels }) {
       alert('Please specify a target column');
       return;
     }
-    const selectedModels = ['random_forest', 'xgboost', 'lightgbm'];
+    
+    // Get relevant models for the problem type
+    const relevantModels = getModelsForProblemType(problemType);
+    const selectedModels = relevantModels.slice(0, 3).map(model => model.value); // Take first 3 models
     onCompareModels(dataset.id, selectedModels, targetColumn);
     onClose();
   };
@@ -108,6 +120,9 @@ function EDAView({ dataset, onClose, onTrainModel, onCompareModels }) {
 
     return type === 'regression' ? regressionModels : classificationModels;
   };
+
+  // Determine if dataset has identified problem type
+  const hasIdentifiedProblemType = dataset.problem_type || (datasetDetails && datasetDetails.dataset.problem_type);
 
   if (loading) {
     return (
@@ -146,7 +161,14 @@ function EDAView({ dataset, onClose, onTrainModel, onCompareModels }) {
                 </div>
                 <div className="stat">
                   <span className="stat-label">Type:</span>
-                  <span className="stat-value">{datasetDetails.dataset.problem_type || 'Unknown'}</span>
+                  <span className="stat-value">
+                    {datasetDetails.dataset.problem_type || 'Unknown'}
+                    {hasIdentifiedProblemType && (
+                      <span className={`problem-type-badge ${problemType}`}>
+                        {problemType}
+                      </span>
+                    )}
+                  </span>
                 </div>
               </div>
             </div>
@@ -174,7 +196,7 @@ function EDAView({ dataset, onClose, onTrainModel, onCompareModels }) {
               <div className="form-group">
                 <label>
                   Target Column:
-                  {problemType && (
+                  {hasIdentifiedProblemType && (
                     <span className={`problem-type-indicator ${problemType}`}>
                       {problemType}
                     </span>
@@ -245,6 +267,16 @@ function EDAView({ dataset, onClose, onTrainModel, onCompareModels }) {
               <button className="modal-close" onClick={() => setShowTrainForm(false)}>×</button>
               <h3>Train Model</h3>
               
+              {hasIdentifiedProblemType && (
+                <div className="problem-type-notice">
+                  <p>
+                    <strong>Dataset Type:</strong> {problemType.charAt(0).toUpperCase() + problemType.slice(1)}
+                    <br />
+                    <small>Showing only {problemType} algorithms based on your dataset analysis</small>
+                  </p>
+                </div>
+              )}
+              
               <div className="form-group">
                 <label>Model Type:</label>
                 <select 
@@ -260,7 +292,10 @@ function EDAView({ dataset, onClose, onTrainModel, onCompareModels }) {
                   ))}
                 </select>
                 <small>
-                  Showing {problemType} models based on your target column
+                  {hasIdentifiedProblemType 
+                    ? `Showing ${problemType} models based on your dataset type`
+                    : 'Showing all available models (dataset type not identified)'
+                  }
                   {intelligentSuggestions?.final_recommendation?.best_model === selectedModel && (
                     <span style={{color: '#27ae60', fontWeight: 'bold'}}>
                       {' '}• AI Recommended
@@ -293,6 +328,17 @@ function EDAView({ dataset, onClose, onTrainModel, onCompareModels }) {
             <div className="modal-content">
               <button className="modal-close" onClick={() => setShowCompareForm(false)}>×</button>
               <h3>Compare Models</h3>
+              
+              {hasIdentifiedProblemType && (
+                <div className="problem-type-notice">
+                  <p>
+                    <strong>Dataset Type:</strong> {problemType.charAt(0).toUpperCase() + problemType.slice(1)}
+                    <br />
+                    <small>Will compare top {problemType} algorithms</small>
+                  </p>
+                </div>
+              )}
+              
               <p>This will train and compare multiple models on your dataset.</p>
               
               <div className="form-actions">

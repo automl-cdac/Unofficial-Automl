@@ -53,12 +53,14 @@ class ModelEvaluation(models.Model):
     """Model to store model evaluation metrics"""
     model = models.ForeignKey(MLModel, on_delete=models.CASCADE)
     
-    # Metrics
+    # Classification Metrics
     accuracy = models.FloatField(null=True, blank=True)
     precision = models.FloatField(null=True, blank=True)
     recall = models.FloatField(null=True, blank=True)
     f1_score = models.FloatField(null=True, blank=True)
     roc_auc = models.FloatField(null=True, blank=True)
+    
+    # Regression Metrics
     mse = models.FloatField(null=True, blank=True)
     mae = models.FloatField(null=True, blank=True)
     r2_score = models.FloatField(null=True, blank=True)
@@ -68,8 +70,11 @@ class ModelEvaluation(models.Model):
     cv_mean = models.FloatField(null=True, blank=True)
     cv_std = models.FloatField(null=True, blank=True)
     
-    # Confusion matrix
-    confusion_matrix = models.JSONField(default=list)
+    # Confusion matrix (for classification)
+    confusion_matrix = models.JSONField(default=dict)
+    
+    # ROC curve data (for classification)
+    roc_curve = models.JSONField(default=dict)
     
     # Feature importance
     feature_importance = models.JSONField(default=dict)

@@ -43,7 +43,8 @@
 }
 
 .form-group input,
-.form-group textarea {
+.form-group textarea,
+.form-group select {
   width: 100%;
   padding: 0.75rem;
   border: 2px solid #ecf0f1;
@@ -54,7 +55,8 @@
 }
 
 .form-group input:focus,
-.form-group textarea:focus {
+.form-group textarea:focus,
+.form-group select:focus {
   outline: none;
   border-color: #3498db;
 }
@@ -64,6 +66,11 @@
   margin-top: 0.25rem;
   color: #7f8c8d;
   font-size: 0.85rem;
+}
+
+.loading-text {
+  color: #3498db !important;
+  font-weight: 600;
 }
 
 .form-actions {
@@ -134,6 +141,52 @@ input[type="file"]::-webkit-file-upload-button:hover {
   background: #2980b9;
 }
 
+/* Columns preview styling */
+.columns-preview {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+}
+
+.columns-preview h4 {
+  margin: 0 0 0.75rem 0;
+  color: #2c3e50;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.columns-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.column-tag {
+  background: #3498db;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: inline-block;
+}
+
+.column-tag:hover {
+  background: #2980b9;
+}
+
+/* Select dropdown styling */
+.form-group select {
+  background: white;
+  cursor: pointer;
+}
+
+.form-group select option {
+  padding: 0.5rem;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .upload-form {
@@ -147,5 +200,14 @@ input[type="file"]::-webkit-file-upload-button:hover {
   .btn-primary,
   .btn-secondary {
     width: 100%;
+  }
+  
+  .columns-list {
+    gap: 0.25rem;
+  }
+  
+  .column-tag {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
   }
 } 
