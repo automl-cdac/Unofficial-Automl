@@ -3,7 +3,7 @@ djangorestframework
 pandas
 scikit-learn
 matplotlib
-reportlab
+reportlab>=4.0.0
 numpy
 seaborn
 plotly

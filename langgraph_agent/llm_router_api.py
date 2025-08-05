@@ -7,5 +7,5 @@ app = FastAPI()
 async def route_prompt(request: Request):
     data = await request.json()
     prompt = data.get("prompt")
-    result = workflow.invoke({"prompt": prompt})
+    result = workflow.invoke({"input": prompt})
     return {"route_result": result["result"]}

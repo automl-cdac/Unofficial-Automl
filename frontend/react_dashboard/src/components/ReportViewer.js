@@ -2,10 +2,33 @@ import React from 'react';
 import './ReportViewer.css';
 
 function ReportViewer({ report, onClose }) {
+  const handleDownloadPDF = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:8000/api/reporting/reports/${report.id}/download_pdf/`,
+        { method: 'GET' }
+      );
+      if (!response.ok) throw new Error('Failed to download PDF');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${report.title}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Error downloading PDF: ' + err.message);
+    }
+  };
   return (
     <div className="modal-overlay">
       <div className="modal-content report-modal">
         <button className="modal-close" onClick={onClose}>×</button>
+        <button className="download-pdf-btn" onClick={handleDownloadPDF} style={{marginLeft: '10px'}}>
+          Download PDF
+        </button>
         
         <h2>{report.title}</h2>
         

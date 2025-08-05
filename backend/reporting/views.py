@@ -12,6 +12,14 @@ from .models import Report, Chart
 from modeling.models import MLModel, ModelEvaluation, ModelComparison
 from ingestion.models import Dataset
 from modeling.services import MLService
+from django.http import HttpResponse
+# Remove WeasyPrint and template imports
+# from django.template.loader import render_to_string
+# from weasyprint import HTML
+# import tempfile
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from io import BytesIO
 
 ml_service = MLService()
 
@@ -318,3 +326,55 @@ def get_available_charts(request):
     ]
     
     return Response(chart_types, status=status.HTTP_200_OK)
+
+def download_report_pdf(request, report_id):
+    """
+    Generate and download a report as PDF using ReportLab (pure Python).
+    """
+    try:
+        report = Report.objects.get(id=report_id)
+        buffer = BytesIO()
+        p = canvas.Canvas(buffer, pagesize=letter)
+        width, height = letter
+
+        # Title
+        p.setFont("Helvetica-Bold", 18)
+        p.drawString(50, height - 50, report.title)
+
+        # Meta
+        p.setFont("Helvetica", 10)
+        p.drawString(50, height - 70, f"Type: {report.report_type}")
+        p.drawString(50, height - 85, f"Generated: {report.created_at.strftime('%Y-%m-%d %H:%M:%S')}")
+
+        # Summary
+        p.setFont("Helvetica-Bold", 14)
+        p.drawString(50, height - 110, "Summary")
+        p.setFont("Helvetica", 11)
+        text = p.beginText(50, height - 130)
+        for line in (report.summary or "").splitlines():
+            text.textLine(line)
+        p.drawText(text)
+
+        # Content
+        p.setFont("Helvetica-Bold", 14)
+        p.drawString(50, height - 180, "Content")
+        p.setFont("Helvetica", 10)
+        text = p.beginText(50, height - 200)
+        content_str = str(report.content)
+        for line in content_str.splitlines():
+            text.textLine(line)
+        p.drawText(text)
+
+        p.showPage()
+        p.save()
+        buffer.seek(0)
+        pdf = buffer.getvalue()
+        buffer.close()
+
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{report.title}.pdf"'
+        return response
+    except Report.DoesNotExist:
+        return Response({'error': 'Report not found'}, status=404)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
