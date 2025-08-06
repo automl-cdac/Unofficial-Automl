@@ -5,7 +5,7 @@ import pickle
 import os
 from datetime import datetime
 from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
-from sklearn.preprocessing import StandardScaler, LabelEncoder, OneHotEncoder
+from sklearn.preprocessing import StandardScaler, LabelEncoder, OneHotEncoder, OrdinalEncoder
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score, roc_auc_score,
     mean_squared_error, mean_absolute_error, r2_score, confusion_matrix,
@@ -143,20 +143,68 @@ class MLService:
         # Handle missing values
         for col in df_processed.columns:
             if df_processed[col].dtype in ['object', 'category']:
-                df_processed[col].fillna(df_processed[col].mode()[0] if not df_processed[col].mode().empty else 'Unknown', inplace=True)
+                mode_val = df_processed[col].mode()[0] if not df_processed[col].mode().empty else 'Unknown'
+                df_processed[col] = df_processed[col].fillna(mode_val)
             else:
-                df_processed[col].fillna(df_processed[col].median(), inplace=True)
+                median_val = df_processed[col].median()
+                df_processed[col] = df_processed[col].fillna(median_val)
         
-        # Encode categorical variables
+        # Remove outliers using IQR method
+        numerical_cols = df_processed.select_dtypes(include=[np.number]).columns.tolist()
+        if target_column in numerical_cols:
+            numerical_cols.remove(target_column)
+        
+        outliers_removed = 0
+        for col in numerical_cols:
+            # Calculate IQR
+            Q1 = df_processed[col].quantile(0.25)
+            Q3 = df_processed[col].quantile(0.75)
+            IQR = Q3 - Q1
+            
+            # Define outlier bounds
+            lower_bound = Q1 - 1.5 * IQR
+            upper_bound = Q3 + 1.5 * IQR
+            
+            # Identify and remove outliers
+            outlier_mask = (df_processed[col] < lower_bound) | (df_processed[col] > upper_bound)
+            outliers_count = outlier_mask.sum()
+            
+            if outliers_count > 0:
+                df_processed = df_processed[~outlier_mask]
+                outliers_removed += outliers_count
+        
+        if outliers_removed > 0:
+            print(f"🚨 Removed {outliers_removed} outliers using IQR method")
+        
+        # Encode categorical variables using intelligent selection
         if categorical_columns is None:
             categorical_columns = df_processed.select_dtypes(include=['object', 'category']).columns.tolist()
         
-        label_encoders = {}
+        encoders = {}
+        encoded_columns = []
+        
         for col in categorical_columns:
             if col in df_processed.columns and col != target_column:
-                le = LabelEncoder()
-                df_processed[col] = le.fit_transform(df_processed[col].astype(str))
-                label_encoders[col] = le
+                # Choose encoding method based on data characteristics
+                encoding_method, encoder = self._choose_encoding_method(df_processed, col, target_column)
+                
+                if encoding_method == 'onehot':
+                    # OneHot encoding - creates new columns
+                    encoded_cols = pd.get_dummies(df_processed[col], prefix=col, drop_first=True)
+                    df_processed = pd.concat([df_processed, encoded_cols], axis=1)
+                    df_processed.drop(columns=[col], inplace=True)
+                    encoded_columns.extend(encoded_cols.columns.tolist())
+                    encoders[col] = {'type': 'onehot', 'encoder': encoder, 'columns': encoded_cols.columns.tolist()}
+                    
+                elif encoding_method == 'label':
+                    # Label encoding - replaces original column
+                    df_processed[col] = encoder.fit_transform(df_processed[col].astype(str))
+                    encoders[col] = {'type': 'label', 'encoder': encoder}
+                    
+                elif encoding_method == 'ordinal':
+                    # Ordinal encoding - for ordered categories
+                    df_processed[col] = encoder.fit_transform(df_processed[col].values.reshape(-1, 1)).flatten()
+                    encoders[col] = {'type': 'ordinal', 'encoder': encoder}
         
         # Scale numerical features
         if numerical_columns is None:
@@ -178,8 +226,53 @@ class MLService:
 
 
         
-        return df_processed, label_encoders, scaler
+        return df_processed, encoders, scaler
     
+    def _choose_encoding_method(self, df, column, target_column):
+        """
+        Intelligently choose the best encoding method for a categorical column
+        
+        Decision Logic:
+        1. OneHot: Low cardinality (≤10), no clear order, good for tree-based models
+        2. Label: High cardinality (>10), no clear order, memory efficient  
+        3. Ordinal: Has natural ordering (e.g., Low/Medium/High)
+        """
+        unique_values = df[column].nunique()
+        unique_vals = df[column].unique()
+        
+        # Check for ordinal patterns (ordered categories)
+        ordinal_patterns = [
+            ['low', 'medium', 'high'],
+            ['small', 'medium', 'large'], 
+            ['poor', 'fair', 'good', 'excellent'],
+            ['never', 'rarely', 'sometimes', 'often', 'always'],
+            ['bad', 'average', 'good'],
+            ['beginner', 'intermediate', 'advanced'],
+            ['very poor', 'poor', 'fair', 'good', 'very good', 'excellent']
+        ]
+        
+        # Convert to lowercase for pattern matching
+        vals_lower = [str(v).lower().strip() for v in unique_vals if pd.notna(v)]
+        
+        # Check if column has ordinal pattern
+        for pattern in ordinal_patterns:
+            if all(val in pattern for val in vals_lower if val != 'unknown'):
+                print(f"🔢 Using ORDINAL encoding for '{column}' (detected pattern: {pattern})")
+                encoder = OrdinalEncoder(categories=[pattern])
+                return 'ordinal', encoder
+        
+        # Decision based on cardinality
+        if unique_values <= 10:
+            # Low cardinality -> OneHot encoding
+            print(f"🎯 Using ONE-HOT encoding for '{column}' ({unique_values} unique values)")
+            return 'onehot', None  # pd.get_dummies doesn't need pre-fitted encoder
+            
+        else:
+            # High cardinality -> Label encoding
+            print(f"🏷️ Using LABEL encoding for '{column}' ({unique_values} unique values - high cardinality)")
+            encoder = LabelEncoder()
+            return 'label', encoder
+
     def detect_problem_type(self, target_column, df):
         """Detect if the problem is classification or regression"""
         target_data = df[target_column]

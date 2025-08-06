@@ -38,7 +38,7 @@ def test_logistic_regression():
     try:
         # Test preprocessing
         print("\n🔧 Testing data preprocessing...")
-        df_processed, label_encoders, scaler = ml_service.preprocess_data(df, 'target')
+        df_processed, encoders, scaler = ml_service.preprocess_data(df, 'target')
         print(f"✅ Preprocessing completed. Processed shape: {df_processed.shape}")
         
         # Prepare features and target
@@ -160,7 +160,7 @@ def test_with_real_dataset():
         
         # Test preprocessing
         print("\n🔧 Testing data preprocessing...")
-        df_processed, label_encoders, scaler = ml_service.preprocess_data(df, target_column)
+        df_processed, encoders, scaler = ml_service.preprocess_data(df, target_column)
         print(f"✅ Preprocessing completed. Processed shape: {df_processed.shape}")
         
         # Prepare features and target

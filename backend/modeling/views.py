@@ -39,7 +39,7 @@ def train_model(request):
             return Response({'error': 'Unsupported file format'}, status=status.HTTP_400_BAD_REQUEST)
         
         # Preprocess data
-        df_processed, label_encoders, scaler = ml_service.preprocess_data(df, target_column)
+        df_processed, encoders, scaler = ml_service.preprocess_data(df, target_column)
         
         # Prepare features and target
         feature_columns = [col for col in df_processed.columns if col != target_column]
@@ -332,7 +332,7 @@ def compare_models(request):
             return Response({'error': 'Unsupported file format'}, status=status.HTTP_400_BAD_REQUEST)
         
         # Preprocess data
-        df_processed, label_encoders, scaler = ml_service.preprocess_data(df, target_column)
+        df_processed, encoders, scaler = ml_service.preprocess_data(df, target_column)
         
         # Prepare features and target
         feature_columns = [col for col in df_processed.columns if col != target_column]
