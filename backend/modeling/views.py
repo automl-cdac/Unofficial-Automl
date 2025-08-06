@@ -49,8 +49,11 @@ def train_model(request):
         # Split data
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
         
-        # Detect problem type
-        problem_type = ml_service.detect_problem_type(target_column, df)
+        # Use stored problem type from dataset, with fallback to detection
+        if dataset.problem_type:
+            problem_type = dataset.problem_type
+        else:
+            problem_type = ml_service.detect_problem_type(target_column, df)
         
         # Create model record
         model = MLModel.objects.create(
@@ -188,12 +191,17 @@ def get_model_metrics(request, model_id):
         if not evaluation:
             return Response({'error': 'No evaluation found for this model'}, status=status.HTTP_404_NOT_FOUND)
         
-        # Determine if it's classification or regression
-        is_classification = model.model_type.lower() in [
-            'classification', 'logistic', 'svm', 'knn', 'decision_tree', 
-            'random_forest', 'gradient_boosting', 'ada_boost', 'catboost',
-            'xgboost', 'lightgbm', 'neural_network'
-        ]
+        # Use the problem type from the dataset, with fallback to model type detection
+        if model.dataset.problem_type:
+            is_classification = model.dataset.problem_type.lower() == 'classification'
+        else:
+            # Fallback: determine by model type (excluding 'logistic_regression' misclassification)
+            classification_types = [
+                'logistic_regression', 'svm', 'knn', 'decision_tree', 
+                'random_forest', 'gradient_boosting', 'ada_boost', 'catboost',
+                'xgboost', 'lightgbm', 'neural_network'
+            ]
+            is_classification = model.model_type.lower() in classification_types
         
         # Prepare metrics based on problem type
         if is_classification:
@@ -220,7 +228,8 @@ def get_model_metrics(request, model_id):
         return Response({
             'metrics': metrics,
             'model_type': model.model_type,
-            'problem_type': 'classification' if is_classification else 'regression'
+            'problem_type': 'classification' if is_classification else 'regression',
+            'dataset_problem_type': model.dataset.problem_type  # Include the original dataset problem type
         }, status=status.HTTP_200_OK)
         
     except MLModel.DoesNotExist:
@@ -333,8 +342,11 @@ def compare_models(request):
         # Split data
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
         
-        # Detect problem type
-        problem_type = ml_service.detect_problem_type(target_column, df)
+        # Use stored problem type from dataset, with fallback to detection
+        if dataset.problem_type:
+            problem_type = dataset.problem_type
+        else:
+            problem_type = ml_service.detect_problem_type(target_column, df)
         
         # Train and evaluate models
         models = []
@@ -440,7 +452,10 @@ def get_model_suggestions(request, dataset_id):
         intelligent_suggestions = ml_service.get_intelligent_model_suggestions(df, dataset.target_column)
         
         # Get traditional suggestions as fallback
-        problem_type = ml_service.detect_problem_type(dataset.target_column, df)
+        if dataset.problem_type:
+            problem_type = dataset.problem_type
+        else:
+            problem_type = ml_service.detect_problem_type(dataset.target_column, df)
         traditional_suggestions = ml_service.suggest_models(
             problem_type, len(df), len(df.columns) - 1
         )

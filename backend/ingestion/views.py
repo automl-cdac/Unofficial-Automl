@@ -176,8 +176,9 @@ def get_dataset_details(request, dataset_id):
             columns_info.append(col_info)
         
         # Generate basic charts
-        # charts = ml_service.generate_charts(df, dataset.target_column)
-        charts = {}  # Temporary fix to test if chart generation is the issue
+        charts = ml_service.generate_charts(df, dataset.target_column)
+        # Sanitize charts for JSON serialization
+        charts = sanitize_for_json(charts)
         
         return Response(sanitize_for_json({
             'dataset': {

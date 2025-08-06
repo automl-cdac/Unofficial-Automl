@@ -23,8 +23,9 @@ function ChartDashboard({ model, onClose }) {
       const response = await axios.get(`${API_BASE_URL}/modeling/models/${model.id}/metrics/`);
       
       if (response.data && response.data.metrics) {
-        console.log('Received model metrics:', response.data.metrics);
-        setModelMetrics(response.data.metrics);
+        console.log('Received model metrics:', response.data);
+        // Store the entire response data, not just metrics
+        setModelMetrics(response.data);
       } else {
         // Fallback to mock data if API doesn't return expected format
         console.warn('API returned unexpected format, using mock data');
@@ -397,7 +398,10 @@ function ChartDashboard({ model, onClose }) {
     );
   }
 
-  const isClassification = isClassificationModel(model.model_type);
+  // Use problem_type from backend metrics if available, otherwise fallback to model type detection
+  const isClassification = modelMetrics && modelMetrics.problem_type 
+    ? modelMetrics.problem_type === 'classification'
+    : isClassificationModel(model.model_type);
 
   return (
     <div className="modal-overlay">
@@ -484,19 +488,19 @@ function ChartDashboard({ model, onClose }) {
                       <div className="summary-metric">
                         <span className="metric-label">Accuracy</span>
                         <span className="metric-value">
-                          {modelMetrics?.accuracy ? (modelMetrics.accuracy * 100).toFixed(1) + '%' : 'N/A'}
+                          {modelMetrics?.metrics?.accuracy ? (modelMetrics.metrics.accuracy * 100).toFixed(1) + '%' : 'N/A'}
                         </span>
                       </div>
                       <div className="summary-metric">
                         <span className="metric-label">F1 Score</span>
                         <span className="metric-value">
-                          {modelMetrics?.f1_score ? (modelMetrics.f1_score * 100).toFixed(1) + '%' : 'N/A'}
+                          {modelMetrics?.metrics?.f1_score ? (modelMetrics.metrics.f1_score * 100).toFixed(1) + '%' : 'N/A'}
                         </span>
                       </div>
                       <div className="summary-metric">
                         <span className="metric-label">AUC-ROC</span>
                         <span className="metric-value">
-                          {modelMetrics?.auc_roc ? modelMetrics.auc_roc.toFixed(3) : 'N/A'}
+                          {modelMetrics?.metrics?.auc_roc ? modelMetrics.metrics.auc_roc.toFixed(3) : 'N/A'}
                         </span>
                       </div>
                     </>
@@ -505,19 +509,19 @@ function ChartDashboard({ model, onClose }) {
                       <div className="summary-metric">
                         <span className="metric-label">R² Score</span>
                         <span className="metric-value">
-                          {modelMetrics?.r2_score ? modelMetrics.r2_score.toFixed(3) : 'N/A'}
+                          {modelMetrics?.metrics?.r2_score ? modelMetrics.metrics.r2_score.toFixed(3) : 'N/A'}
                         </span>
                       </div>
                       <div className="summary-metric">
                         <span className="metric-label">RMSE</span>
                         <span className="metric-value">
-                          {modelMetrics?.rmse ? modelMetrics.rmse.toFixed(4) : 'N/A'}
+                          {modelMetrics?.metrics?.rmse ? modelMetrics.metrics.rmse.toFixed(4) : 'N/A'}
                         </span>
                       </div>
                       <div className="summary-metric">
                         <span className="metric-label">MAE</span>
                         <span className="metric-value">
-                          {modelMetrics?.mae ? modelMetrics.mae.toFixed(4) : 'N/A'}
+                          {modelMetrics?.metrics?.mae ? modelMetrics.metrics.mae.toFixed(4) : 'N/A'}
                         </span>
                       </div>
                     </>
@@ -531,7 +535,7 @@ function ChartDashboard({ model, onClose }) {
         {activeTab === 'metrics' && (
           <div className="metrics-section">
             <h3>Detailed Performance Metrics</h3>
-            {isClassification ? renderClassificationMetrics(modelMetrics) : renderRegressionMetrics(modelMetrics)}
+            {isClassification ? renderClassificationMetrics(modelMetrics?.metrics) : renderRegressionMetrics(modelMetrics?.metrics)}
           </div>
         )}
 
@@ -544,13 +548,13 @@ function ChartDashboard({ model, onClose }) {
                   <div className="chart-card">
                     <h4>Confusion Matrix</h4>
                     <div className="chart-content">
-                      {renderConfusionMatrix(modelMetrics?.confusion_matrix)}
+                      {renderConfusionMatrix(modelMetrics?.metrics?.confusion_matrix)}
                     </div>
                   </div>
                   <div className="chart-card">
                     <h4>ROC Curve</h4>
                     <div className="chart-content">
-                      {renderROCCurve(modelMetrics?.roc_curve)}
+                      {renderROCCurve(modelMetrics?.metrics?.roc_curve)}
                     </div>
                   </div>
                 </>
@@ -558,7 +562,7 @@ function ChartDashboard({ model, onClose }) {
               <div className="chart-card">
                 <h4>Feature Importance</h4>
                 <div className="chart-content">
-                  {renderFeatureImportance(modelMetrics?.feature_importance)}
+                  {renderFeatureImportance(modelMetrics?.metrics?.feature_importance)}
                 </div>
               </div>
             </div>
@@ -577,7 +581,7 @@ function ChartDashboard({ model, onClose }) {
                 <h4>Key Insights</h4>
                 {(() => {
                   // Process feature importance data to get insights
-                  const features = modelMetrics?.feature_importance;
+                  const features = modelMetrics?.metrics?.feature_importance;
                   if (!features) {
                     return <p>Feature importance data not available</p>;
                   }
