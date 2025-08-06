@@ -4,6 +4,7 @@ import FileUploader from '../components/FileUploader';
 import EDAView from '../components/EDAView';
 import ChartDashboard from '../components/ChartDashboard';
 import ReportViewer from '../components/ReportViewer';
+import Chatbot from '../components/Chatbot';
 import './Dashboard.css';
 
 const API_BASE_URL = 'http://localhost:8000/api';
@@ -18,6 +19,8 @@ function Dashboard() {
   const [activeTab, setActiveTab] = useState('upload');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showChatbot, setShowChatbot] = useState(false);
+  const [chatbotDataset, setChatbotDataset] = useState(null);
 
   useEffect(() => {
     fetchDatasets();
@@ -240,6 +243,15 @@ function Dashboard() {
                     <button onClick={() => handleGenerateReport('data_analysis', dataset.id)}>
                       Generate Report
                     </button>
+                    <button 
+                      className="chatbot-btn"
+                      onClick={() => {
+                        setChatbotDataset(dataset);
+                        setShowChatbot(true);
+                      }}
+                    >
+                      🤖 Ask AI
+                    </button>
                   </div>
                 </div>
               ))}
@@ -324,6 +336,16 @@ function Dashboard() {
               />
             )}
           </div>
+        )}
+
+        {showChatbot && chatbotDataset && (
+          <Chatbot 
+            dataset={chatbotDataset}
+            onClose={() => {
+              setShowChatbot(false);
+              setChatbotDataset(null);
+            }}
+          />
         )}
       </main>
     </div>

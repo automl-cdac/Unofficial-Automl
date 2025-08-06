@@ -25,6 +25,7 @@ urlpatterns = [
     path('api/ingestion/', include('ingestion.urls')),
     path('api/modeling/', include('modeling.urls')),
     path('api/reporting/', include('reporting.urls')),
+    path('api/chatbot/', include('chatbot.urls')),
 ]
 
 # Serve media files in development

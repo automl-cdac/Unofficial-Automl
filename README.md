@@ -1,195 +1,255 @@
-# Unofficial-Automl
+# Unofficial AutoML System
 
-A comprehensive FullStack Machine Learning platform with intelligent model selection using LangGraph and Gemini API.
+A comprehensive AutoML system with AI-powered data analysis, preprocessing, modeling, and chatbot assistance.
 
 ## 🚀 Features
 
-### 🤖 Intelligent Model Selection
-- **LangGraph Workflow**: Multi-step intelligent model selection process
-- **Gemini API Integration**: AI-powered analysis and recommendations
-- **Data Analysis**: Automatic dataset analysis and problem type detection
-- **Model Recommendations**: Intelligent suggestions based on data characteristics
-- **Hyperparameter Optimization**: LLM-driven hyperparameter tuning
+- **Data Ingestion**: Upload and manage datasets (CSV, Excel)
+- **AI Chatbot**: Interactive data analysis assistant powered by Google Gemini
+- **Data Preprocessing**: Automated data cleaning and feature engineering
+- **Model Training**: AutoML with multiple algorithms (Random Forest, XGBoost, etc.)
+- **Visualization**: Interactive charts and data insights
+- **Reporting**: Comprehensive analysis reports
 
-### 📊 Data Preprocessing
-- **Automated Cleaning**: Handle missing values, outliers, and data quality issues
-- **Feature Engineering**: Encoding, scaling, and dimensionality reduction
-- **Data Analysis**: Comprehensive EDA with statistical insights
-- **Preprocessing Suggestions**: AI-powered preprocessing recommendations
+## 📋 Prerequisites
 
-### 🎯 Model Training & Evaluation
-- **Multiple Algorithms**: Support for 15+ ML algorithms
-- **Cross-validation**: Robust model evaluation
-- **Performance Metrics**: Comprehensive evaluation metrics
-- **Model Comparison**: Side-by-side model performance analysis
-
-### 📈 Reporting & Visualization
-- **Interactive Charts**: Plotly-powered visualizations
-- **Comprehensive Reports**: Detailed analysis reports
-- **Model Explanations**: AI-powered model choice explanations
-- **Performance Tracking**: Historical model performance tracking
-
-## 🏗️ Architecture
-
-### Backend (Django + Python)
-- **Django REST Framework**: RESTful API endpoints
-- **LangGraph**: Intelligent workflow orchestration
-- **Gemini API**: AI-powered model selection
-- **Scikit-learn**: Core ML algorithms
-- **XGBoost/LightGBM/CatBoost**: Advanced ML libraries
-- **Optuna**: Hyperparameter optimization
-
-### Frontend (React)
-- **Modern UI**: Beautiful, responsive dashboard
-- **Real-time Updates**: Live model training progress
-- **Interactive Charts**: Plotly.js visualizations
-- **File Upload**: Drag-and-drop dataset upload
+- Python 3.8+
+- Node.js 16+
+- npm or yarn
+- Google Gemini API key
 
 ## 🛠️ Installation
 
-### Prerequisites
-- Python 3.8+
-- Node.js 16+
-- Google Gemini API key
+### 1. Clone the Repository
+```bash
+git clone <repository-url>
+cd Unofficial-Automl
+```
 
-### Backend Setup
+### 2. Backend Setup
+
 ```bash
 cd backend
+
+# Create virtual environment
+python -m venv .backend_venv
+
+# Activate virtual environment
+# On Windows:
+.backend_venv\Scripts\activate
+# On macOS/Linux:
+source .backend_venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
 
-# Set up environment variables
+# Create .env file
 cp env_example.txt .env
-# Edit .env with your API keys
+# Edit .env and add your Google Gemini API key
+```
+
+### 3. Frontend Setup
+
+```bash
+cd frontend/react_dashboard
+
+# Install dependencies
+npm install
+```
+
+### 4. Database Setup
+
+```bash
+cd backend
 
 # Run migrations
 python manage.py makemigrations
 python manage.py migrate
 
-# Start the server
+# Create superuser (optional)
+python manage.py createsuperuser
+```
+
+## 🔑 API Configuration
+
+### Google Gemini API Setup
+
+1. Get your API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Edit `backend/.env`:
+```env
+GOOGLE_API_KEY=your-actual-gemini-api-key-here
+```
+
+### Environment Variables
+
+Create `backend/.env` with:
+```env
+# Django Settings
+SECRET_KEY=your-django-secret-key
+DEBUG=True
+
+# Google Gemini API
+GOOGLE_API_KEY=your-google-gemini-api-key-here
+
+# Optional: Other LLM APIs
+OPENAI_API_KEY=your-openai-api-key-here
+ANTHROPIC_API_KEY=your-anthropic-api-key-here
+```
+
+## 🚀 Quick Start
+
+### Option 1: Using Scripts
+
+```bash
+# Run health check
+python scripts/utils.py health
+
+# Create .env template
+python scripts/utils.py create-env
+
+# Start everything
+./scripts/run_all.sh
+
+# Clean up
+./scripts/clean_all.sh
+```
+
+### Option 2: Manual Start
+
+#### Backend
+```bash
+cd backend
+source .backend_venv/bin/activate  # or .backend_venv\Scripts\activate on Windows
 python manage.py runserver
 ```
 
-### Frontend Setup
+#### Frontend
 ```bash
 cd frontend/react_dashboard
-npm install
 npm start
 ```
 
-## 🔧 Configuration
+## 🔧 Troubleshooting
 
-### API Keys Setup
-1. Get a Google Gemini API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Create a `.env` file in the backend directory
-3. Add your API key: `GOOGLE_API_KEY=your-api-key-here`
+### Chatbot Issues
 
-### Environment Variables
+#### "Failed to send message" Error
+
+1. **Check API Key**: Ensure your Google Gemini API key is correctly set in `backend/.env`
+2. **Check Backend**: Make sure Django server is running on port 8000
+3. **Check Network**: Verify no firewall is blocking the connection
+
+#### Dataset Upload Issues
+
+1. **File Format**: Only CSV and Excel files are supported
+2. **File Size**: Large files may take time to process
+3. **Permissions**: Ensure the `media/` directory is writable
+
+### Common Issues
+
+#### Virtual Environment Not Activated
 ```bash
-# Required
-GOOGLE_API_KEY=your-gemini-api-key
+# Windows
+.backend_venv\Scripts\activate
 
-# Optional
-OPENAI_API_KEY=your-openai-api-key
-ANTHROPIC_API_KEY=your-anthropic-api-key
+# macOS/Linux
+source .backend_venv/bin/activate
 ```
 
-## 📖 Usage
+#### Port Already in Use
+```bash
+# Kill process on port 8000
+lsof -ti:8000 | xargs kill -9
 
-### 1. Upload Dataset
-- Navigate to the dashboard
-- Click "Upload Dataset"
-- Select your CSV/Excel file
-- Specify target column and metadata
+# Or use different port
+python manage.py runserver 8001
+```
 
-### 2. AI-Powered Analysis
-- The system automatically analyzes your data
-- LangGraph workflow processes dataset characteristics
-- Gemini API provides intelligent model recommendations
-- Get detailed reasoning for each recommendation
+#### Node Modules Missing
+```bash
+cd frontend/react_dashboard
+rm -rf node_modules package-lock.json
+npm install
+```
 
-### 3. Model Training
-- Choose from AI-recommended models
-- Use optimized hyperparameters
-- Train single model or compare multiple models
-- Monitor training progress in real-time
+#### Database Issues
+```bash
+cd backend
+python manage.py makemigrations
+python manage.py migrate
+```
 
-### 4. Evaluation & Reports
-- View comprehensive performance metrics
-- Generate detailed reports
-- Export results and visualizations
-- Get AI explanations for model choices
+## 📁 Project Structure
 
-## 🔍 API Endpoints
+```
+Unofficial-Automl/
+├── backend/                 # Django backend
+│   ├── chatbot/            # AI chatbot app
+│   ├── ingestion/          # Data upload and management
+│   ├── preprocessing/      # Data preprocessing
+│   ├── modeling/          # ML model training
+│   ├── reporting/         # Analysis reports
+│   ├── users/             # User management
+│   └── django_api/        # Main Django project
+├── frontend/              # React frontend
+│   └── react_dashboard/   # Main dashboard
+├── langgraph_agent/       # LangGraph agent components
+└── scripts/              # Utility scripts
+```
 
-### Data Ingestion
+## 🤖 Chatbot Features
+
+The AI chatbot provides:
+
+- **Dataset Analysis**: Automatic insights and data quality assessment
+- **Preprocessing Suggestions**: AI-powered data cleaning recommendations
+- **Visualization Help**: Chart suggestions and creation
+- **Model Recommendations**: ML algorithm suggestions
+- **Interactive Q&A**: Natural language data queries
+
+### Dataset Sampling
+
+The chatbot intelligently samples datasets to work within API limits:
+- Sends only column names and first 3 rows to Gemini
+- Provides comprehensive analysis based on sample data
+- Handles large datasets efficiently
+
+## 🔍 Health Check
+
+Run the health check utility to diagnose issues:
+
+```bash
+python scripts/utils.py health
+```
+
+This will check:
+- ✅ Python version compatibility
+- ✅ Required dependencies
+- ✅ API key configuration
+- ✅ Database setup
+- ✅ Frontend dependencies
+
+## 📊 API Endpoints
+
+### Chatbot
+- `POST /api/chatbot/session/create/` - Create chat session
+- `POST /api/chatbot/message/send/` - Send message
+- `GET /api/chatbot/session/{id}/history/` - Get chat history
+- `POST /api/chatbot/analyze/` - Analyze dataset
+- `POST /api/chatbot/visualize/` - Generate visualization
+- `POST /api/chatbot/preprocessing/suggestions/` - Get preprocessing tips
+
+### Data Management
 - `POST /api/ingestion/upload/` - Upload dataset
 - `GET /api/ingestion/datasets/` - List datasets
-- `GET /api/ingestion/datasets/{id}/` - Dataset details
+- `DELETE /api/ingestion/datasets/{id}/` - Delete dataset
 
-### Model Training
-- `POST /api/modeling/train/` - Train model
-- `GET /api/modeling/models/` - List models
-- `GET /api/modeling/models/{id}/` - Model details
-- `POST /api/modeling/compare/` - Compare models
+## 🛡️ Security Notes
 
-### Intelligent Selection
-- `GET /api/modeling/suggestions/{dataset_id}/` - AI model suggestions
-- `POST /api/modeling/hyperparameters/` - Optimized hyperparameters
-- `POST /api/modeling/explain/` - Model choice explanations
-
-### Reporting
-- `POST /api/reporting/generate/` - Generate reports
-- `GET /api/reporting/reports/` - List reports
-- `GET /api/reporting/reports/{id}/` - Report details
-
-## 🤖 Intelligent Features
-
-### LangGraph Workflow
-1. **Data Analysis**: Analyze dataset characteristics
-2. **Model Suggestion**: Recommend appropriate models
-3. **Model Evaluation**: Evaluate each model's suitability
-4. **Final Recommendation**: Select best model with confidence
-
-### Gemini API Integration
-- **Dataset Analysis**: Understand data patterns and quality
-- **Model Selection**: Intelligent algorithm recommendations
-- **Hyperparameter Tuning**: Optimized parameter suggestions
-- **Explanation Generation**: Clear reasoning for model choices
-
-## 📊 Supported Models
-
-### Classification
-- Random Forest
-- XGBoost
-- LightGBM
-- CatBoost
-- Logistic Regression
-- Support Vector Machine
-- K-Nearest Neighbors
-- Decision Tree
-- Gradient Boosting
-- AdaBoost
-
-### Regression
-- Random Forest
-- XGBoost
-- LightGBM
-- CatBoost
-- Linear Regression
-- Ridge Regression
-- Lasso Regression
-- Elastic Net
-- Support Vector Regression
-- K-Nearest Neighbors
-
-## 🎯 Key Benefits
-
-1. **Intelligent Selection**: AI-powered model recommendations
-2. **Automated Preprocessing**: Smart data cleaning and feature engineering
-3. **Comprehensive Evaluation**: Multiple metrics and cross-validation
-4. **Beautiful UI**: Modern, responsive dashboard
-5. **Detailed Reports**: Comprehensive analysis and visualizations
-6. **Scalable Architecture**: Easy to extend and customize
+- Never commit your `.env` file to version control
+- Use strong Django secret keys in production
+- Configure CORS properly for production
+- Set `DEBUG=False` in production
 
 ## 🤝 Contributing
 
@@ -203,10 +263,21 @@ ANTHROPIC_API_KEY=your-anthropic-api-key
 
 This project is licensed under the MIT License.
 
-## 🙏 Acknowledgments
+## 🆘 Support
 
-- LangGraph for workflow orchestration
-- Google Gemini API for intelligent analysis
-- Scikit-learn for core ML algorithms
-- React for the frontend framework
-- Plotly for interactive visualizations
+If you encounter issues:
+
+1. Check the troubleshooting section above
+2. Run the health check utility
+3. Check the Django logs for backend errors
+4. Check browser console for frontend errors
+5. Ensure all dependencies are installed correctly
+
+For chatbot-specific issues:
+- Verify your Google Gemini API key is valid
+- Check that the backend is running on port 8000
+- Ensure datasets are properly uploaded before using the chatbot
+
+
+
+

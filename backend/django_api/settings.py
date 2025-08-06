@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'preprocessing',
     'ingestion',
     'users',
+    'chatbot',
 ]
 
 MIDDLEWARE = [
