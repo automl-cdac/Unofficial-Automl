@@ -202,7 +202,7 @@ def get_model_metrics(request, model_id):
                 'precision': evaluation.precision,
                 'recall': evaluation.recall,
                 'f1_score': evaluation.f1_score,
-                'auc_roc': evaluation.roc_auc,
+                # 'auc_roc': evaluation.roc_auc,
                 'confusion_matrix': evaluation.confusion_matrix,
                 'roc_curve': getattr(evaluation, 'roc_curve', None),
                 'feature_importance': evaluation.feature_importance

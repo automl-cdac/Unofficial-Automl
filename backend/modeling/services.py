@@ -122,9 +122,16 @@ class MLService:
         if CATBOOST_AVAILABLE:
             self.default_params['catboost'] = {'iterations': 100, 'random_state': 42}
     
-    def preprocess_data(self, df, target_column, categorical_columns=None, numerical_columns=None, missing_threshold=0.3):
+    def preprocess_data(self, df, target_column, categorical_columns=None, numerical_columns=None, missing_threshold=0.3, missing_threshold=0.3):
         """Comprehensive data preprocessing"""
         df_processed = df.copy()
+        
+        # 1. Drop columns with too many missing values
+        missing_fraction = df_processed.isnull().mean()
+        cols_to_drop = missing_fraction[missing_fraction > missing_threshold].index.tolist()
+        if target_column in cols_to_drop:
+            cols_to_drop.remove(target_column)  # Never drop the target column!
+        df_processed.drop(columns=cols_to_drop, inplace=True)
         
         # 1. Drop columns with too many missing values
         missing_fraction = df_processed.isnull().mean()
@@ -162,9 +169,13 @@ class MLService:
             df_processed[numerical_columns] = df_processed[numerical_columns].replace(
                 [np.inf, -np.inf], np.nan
             ).fillna(0)
+            df_processed[numerical_columns] = df_processed[numerical_columns].replace(
+                [np.inf, -np.inf], np.nan
+            ).fillna(0)
             df_processed[numerical_columns] = scaler.fit_transform(df_processed[numerical_columns])
             # Mark that scaling has been applied
             self._scaler_applied = True
+
 
         
         return df_processed, label_encoders, scaler
