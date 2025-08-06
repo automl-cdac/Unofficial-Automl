@@ -122,7 +122,7 @@ class MLService:
         if CATBOOST_AVAILABLE:
             self.default_params['catboost'] = {'iterations': 100, 'random_state': 42}
     
-    def preprocess_data(self, df, target_column, categorical_columns=None, numerical_columns=None, missing_threshold=0.3, missing_threshold=0.3):
+    def preprocess_data(self, df, target_column, categorical_columns=None, numerical_columns=None, missing_threshold=0.3):
         """Comprehensive data preprocessing"""
         df_processed = df.copy()
         
