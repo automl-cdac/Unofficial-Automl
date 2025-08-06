@@ -153,6 +153,24 @@ function Dashboard() {
     }
   };
 
+  const handleDeleteDataset = async (datasetId) => {
+    if (!window.confirm('Are you sure you want to delete this dataset and all related models and reports?')) return;
+    setLoading(true);
+    setError('');
+    try {
+      await axios.delete(`${API_BASE_URL}/ingestion/datasets/${datasetId}/delete/`);
+      await fetchDatasets();
+      await fetchModels();
+      await fetchReports();
+      alert('Dataset and all related data deleted successfully!');
+    } catch (error) {
+      setError('Failed to delete dataset');
+      console.error('Error deleting dataset:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="dashboard">
       <header className="dashboard-header">
@@ -224,6 +242,14 @@ function Dashboard() {
             <div className="datasets-grid">
               {datasets.map((dataset) => (
                 <div key={dataset.id} className="dataset-card">
+                  <button
+                    className="delete-dataset-btn"
+                    title="Delete Dataset"
+                    onClick={() => handleDeleteDataset(dataset.id)}
+                    style={{ position: 'absolute', top: 8, right: 8, zIndex: 2 }}
+                  >
+                    ❌
+                  </button>
                   <h3>{dataset.name}</h3>
                   <p>{dataset.description}</p>
                   <div className="dataset-stats">
