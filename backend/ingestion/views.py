@@ -7,10 +7,31 @@ from django.http import JsonResponse
 import pandas as pd
 import numpy as np
 import json
+import math
 from .models import Dataset, DataInfo
 from modeling.services import MLService
 
 ml_service = MLService()
+
+def safe_float(val):
+    if val is None or (isinstance(val, float) and (math.isnan(val) or math.isinf(val))):
+        return None
+    return val
+
+def sanitize_for_json(obj):
+    """Recursively sanitize an object for JSON serialization"""
+    if isinstance(obj, dict):
+        return {k: sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [sanitize_for_json(item) for item in obj]
+    elif isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return None
+        return obj
+    elif isinstance(obj, (int, str, bool, type(None))):
+        return obj
+    else:
+        return str(obj)  # Convert any other types to string
 
 @api_view(['POST'])
 @parser_classes([MultiPartParser, FormParser])
@@ -135,8 +156,9 @@ def get_dataset_details(request, dataset_id):
         else:
             return Response({'error': 'Unsupported file format'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Get sample data
-        sample_data = df.head(10).to_dict('records')
+        # Sanitize DataFrame for JSON serialization
+        df = df.replace([np.inf, -np.inf], np.nan)
+        sample_data = df.head(10).where(pd.notnull(df.head(10)), None).to_dict('records')
         
         # Get column statistics
         columns_info = []
@@ -146,17 +168,18 @@ def get_dataset_details(request, dataset_id):
                 'data_type': data_info.data_type,
                 'missing_count': data_info.missing_count,
                 'unique_count': data_info.unique_count,
-                'min_value': data_info.min_value,
-                'max_value': data_info.max_value,
-                'mean_value': data_info.mean_value,
-                'std_value': data_info.std_value,
+                'min_value': safe_float(data_info.min_value),
+                'max_value': safe_float(data_info.max_value),
+                'mean_value': safe_float(data_info.mean_value),
+                'std_value': safe_float(data_info.std_value),
             }
             columns_info.append(col_info)
         
         # Generate basic charts
-        charts = ml_service.generate_charts(df, dataset.target_column)
+        # charts = ml_service.generate_charts(df, dataset.target_column)
+        charts = {}  # Temporary fix to test if chart generation is the issue
         
-        return Response({
+        return Response(sanitize_for_json({
             'dataset': {
                 'id': dataset.id,
                 'name': dataset.name,
@@ -170,7 +193,7 @@ def get_dataset_details(request, dataset_id):
             'columns_info': columns_info,
             'sample_data': sample_data,
             'charts': charts
-        }, status=status.HTTP_200_OK)
+        }), status=status.HTTP_200_OK)
         
     except Dataset.DoesNotExist:
         return Response({'error': 'Dataset not found'}, status=status.HTTP_404_NOT_FOUND)
