@@ -17,10 +17,36 @@ from sklearn.svm import SVC, SVR
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor, AdaBoostClassifier
-import xgboost as xgb
-import lightgbm as lgb
-import catboost as cb
-import optuna
+
+# Optional imports with error handling
+try:
+    import xgboost as xgb
+    XGBOOST_AVAILABLE = True
+except ImportError:
+    print("Warning: XGBoost not available")
+    XGBOOST_AVAILABLE = False
+
+try:
+    import lightgbm as lgb
+    LIGHTGBM_AVAILABLE = True
+except ImportError:
+    print("Warning: LightGBM not available")
+    LIGHTGBM_AVAILABLE = False
+
+try:
+    import catboost as cb
+    CATBOOST_AVAILABLE = True
+except ImportError:
+    print("Warning: CatBoost not available")
+    CATBOOST_AVAILABLE = False
+
+try:
+    import optuna
+    OPTUNA_AVAILABLE = True
+except ImportError:
+    print("Warning: Optuna not available")
+    OPTUNA_AVAILABLE = False
+
 import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.graph_objects as go
@@ -36,9 +62,6 @@ class MLService:
         self.models = {
             'classification': {
                 'random_forest': RandomForestClassifier,
-                'xgboost': xgb.XGBClassifier,
-                'lightgbm': lgb.LGBMClassifier,
-                'catboost': cb.CatBoostClassifier,
                 'logistic_regression': LogisticRegression,
                 'svm': SVC,
                 'knn': KNeighborsClassifier,
@@ -48,9 +71,6 @@ class MLService:
             },
             'regression': {
                 'random_forest': RandomForestRegressor,
-                'xgboost': xgb.XGBRegressor,
-                'lightgbm': lgb.LGBMRegressor,
-                'catboost': cb.CatBoostRegressor,
                 'linear_regression': LinearRegression,
                 'ridge': Ridge,
                 'lasso': Lasso,
@@ -62,15 +82,25 @@ class MLService:
             }
         }
         
+        # Add optional models if available
+        if XGBOOST_AVAILABLE:
+            self.models['classification']['xgboost'] = xgb.XGBClassifier
+            self.models['regression']['xgboost'] = xgb.XGBRegressor
+            
+        if LIGHTGBM_AVAILABLE:
+            self.models['classification']['lightgbm'] = lgb.LGBMClassifier
+            self.models['regression']['lightgbm'] = lgb.LGBMRegressor
+            
+        if CATBOOST_AVAILABLE:
+            self.models['classification']['catboost'] = cb.CatBoostClassifier
+            self.models['regression']['catboost'] = cb.CatBoostRegressor
+        
         # Initialize intelligent model selector
         self.model_selector = ModelSelectionService()
         
         self.default_params = {
             'random_forest': {'n_estimators': 100, 'random_state': 42},
-            'xgboost': {'n_estimators': 100, 'random_state': 42},
-            'lightgbm': {'n_estimators': 100, 'random_state': 42},
-            'catboost': {'iterations': 100, 'random_state': 42},
-            'logistic_regression': {'random_state': 42},
+            'logistic_regression': {'random_state': 42, 'max_iter': 1000, 'solver': 'lbfgs'},
             'svm': {'random_state': 42},
             'knn': {'n_neighbors': 5},
             'decision_tree': {'random_state': 42},
@@ -81,6 +111,16 @@ class MLService:
             'lasso': {'alpha': 1.0},
             'elastic_net': {'alpha': 1.0, 'l1_ratio': 0.5},
         }
+        
+        # Add optional model parameters if available
+        if XGBOOST_AVAILABLE:
+            self.default_params['xgboost'] = {'n_estimators': 100, 'random_state': 42}
+            
+        if LIGHTGBM_AVAILABLE:
+            self.default_params['lightgbm'] = {'n_estimators': 100, 'random_state': 42}
+            
+        if CATBOOST_AVAILABLE:
+            self.default_params['catboost'] = {'iterations': 100, 'random_state': 42}
     
     def preprocess_data(self, df, target_column, categorical_columns=None, numerical_columns=None):
         """Comprehensive data preprocessing"""
@@ -113,6 +153,8 @@ class MLService:
         scaler = StandardScaler()
         if numerical_columns:
             df_processed[numerical_columns] = scaler.fit_transform(df_processed[numerical_columns])
+            # Mark that scaling has been applied
+            self._scaler_applied = True
         
         return df_processed, label_encoders, scaler
     
@@ -250,11 +292,46 @@ class MLService:
         if hyperparameters is None:
             hyperparameters = self.default_params.get(model_name, {})
         
+        # Check if model type exists
+        if problem_type not in self.models:
+            raise ValueError(f"Problem type '{problem_type}' not supported")
+        
+        if model_name not in self.models[problem_type]:
+            raise ValueError(f"Model type '{model_name}' not supported for {problem_type}")
+        
+        # Special handling for logistic regression
+        if model_name == 'logistic_regression':
+            # Check for perfect separability
+            if len(np.unique(y_train)) < 2:
+                raise ValueError("Logistic regression requires at least 2 classes in the target variable")
+            
+            # Check for data quality issues
+            if X_train.isnull().any().any():
+                raise ValueError("Logistic regression cannot handle missing values in features")
+            
+            # Ensure data is properly scaled for logistic regression
+            if not hasattr(self, '_scaler_applied'):
+                print("Warning: Data should be scaled for logistic regression")
+        
         model_class = self.models[problem_type][model_name]
         model = model_class(**hyperparameters)
         
         start_time = datetime.now()
-        model.fit(X_train, y_train)
+        try:
+            model.fit(X_train, y_train)
+        except Exception as e:
+            if model_name == 'logistic_regression':
+                # Try with different solver if lbfgs fails
+                if 'lbfgs' in str(e).lower():
+                    print("Warning: lbfgs solver failed, trying with liblinear solver")
+                    hyperparameters['solver'] = 'liblinear'
+                    model = model_class(**hyperparameters)
+                    model.fit(X_train, y_train)
+                else:
+                    raise e
+            else:
+                raise e
+        
         training_time = (datetime.now() - start_time).total_seconds()
         
         return model, training_time
@@ -298,6 +375,10 @@ class MLService:
     
     def optimize_hyperparameters(self, model_name, X_train, y_train, problem_type, n_trials=50):
         """Optimize hyperparameters using Optuna"""
+        if not OPTUNA_AVAILABLE:
+            print("Warning: Optuna not available, skipping hyperparameter optimization")
+            return self.default_params.get(model_name, {})
+            
         def objective(trial):
             if model_name == 'random_forest':
                 params = {
@@ -306,14 +387,14 @@ class MLService:
                     'min_samples_split': trial.suggest_int('min_samples_split', 2, 10),
                     'random_state': 42
                 }
-            elif model_name == 'xgboost':
+            elif model_name == 'xgboost' and XGBOOST_AVAILABLE:
                 params = {
                     'n_estimators': trial.suggest_int('n_estimators', 50, 300),
                     'max_depth': trial.suggest_int('max_depth', 3, 10),
                     'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3),
                     'random_state': 42
                 }
-            elif model_name == 'lightgbm':
+            elif model_name == 'lightgbm' and LIGHTGBM_AVAILABLE:
                 params = {
                     'n_estimators': trial.suggest_int('n_estimators', 50, 300),
                     'max_depth': trial.suggest_int('max_depth', 3, 10),
@@ -347,12 +428,24 @@ class MLService:
     
     def save_model(self, model, filepath):
         """Save trained model"""
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        joblib.dump(model, filepath)
+        from django.conf import settings
+        import os
+        
+        # Create full path within media directory
+        full_path = os.path.join(settings.MEDIA_ROOT, filepath)
+        print(f"DEBUG: Saving model to {full_path}")
+        os.makedirs(os.path.dirname(full_path), exist_ok=True)
+        joblib.dump(model, full_path)
+        print(f"DEBUG: Model saved successfully")
     
     def load_model(self, filepath):
         """Load trained model"""
-        return joblib.load(filepath)
+        from django.conf import settings
+        import os
+        
+        # Create full path within media directory
+        full_path = os.path.join(settings.MEDIA_ROOT, filepath)
+        return joblib.load(full_path)
     
     def generate_charts(self, df, target_column, model=None, y_test=None, y_pred=None):
         """Generate various charts for analysis"""

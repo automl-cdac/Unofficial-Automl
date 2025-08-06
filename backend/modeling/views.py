@@ -83,28 +83,49 @@ def train_model(request):
         if problem_type == 'classification':
             # Confusion matrix details
             from sklearn.metrics import confusion_matrix
-            cm = confusion_matrix(y_test, y_pred)
-            if len(cm) == 2:
-                additional_metrics['confusion_matrix'] = {
-                    'true_negatives': int(cm[0, 0]),
-                    'false_positives': int(cm[0, 1]),
-                    'false_negatives': int(cm[1, 0]),
-                    'true_positives': int(cm[1, 1])
-                }
+            try:
+                cm = confusion_matrix(y_test, y_pred)
+                if len(cm) == 2:
+                    additional_metrics['confusion_matrix'] = {
+                        'true_negatives': int(cm[0, 0]),
+                        'false_positives': int(cm[0, 1]),
+                        'false_negatives': int(cm[1, 0]),
+                        'true_positives': int(cm[1, 1])
+                    }
+            except Exception as e:
+                print(f"Warning: Could not calculate confusion matrix: {e}")
+                # Continue without confusion matrix
             
             # ROC curve data
             if y_pred_proba is not None and len(np.unique(y_test)) == 2:
-                fpr, tpr, _ = roc_curve(y_test, y_pred_proba[:, 1])
-                additional_metrics['roc_curve'] = {
-                    'fpr': fpr.tolist(),
-                    'tpr': tpr.tolist()
-                }
+                try:
+                    # Get the positive class index
+                    classes = trained_model.classes_
+                    if len(classes) == 2:
+                        # Use the second class (usually the positive class) for ROC curve
+                        positive_class_idx = 1 if len(classes) > 1 else 0
+                        fpr, tpr, _ = roc_curve(y_test, y_pred_proba[:, positive_class_idx])
+                        additional_metrics['roc_curve'] = {
+                            'fpr': fpr.tolist(),
+                            'tpr': tpr.tolist()
+                        }
+                except Exception as e:
+                    print(f"Warning: Could not calculate ROC curve: {e}")
+                    # Continue without ROC curve
         
         # Cross-validation
-        cv_results = ml_service.cross_validate_model(trained_model, X, y)
+        try:
+            cv_results = ml_service.cross_validate_model(trained_model, X, y)
+        except Exception as e:
+            print(f"Warning: Cross-validation failed: {e}")
+            cv_results = {'scores': [], 'mean': 0.0, 'std': 0.0}
         
         # Get feature importance
-        feature_importance = ml_service.get_feature_importance(trained_model, feature_columns)
+        try:
+            feature_importance = ml_service.get_feature_importance(trained_model, feature_columns)
+        except Exception as e:
+            print(f"Warning: Feature importance calculation failed: {e}")
+            feature_importance = {}
         
         # Save model
         model_path = f"models/{model.id}_{model_type}.joblib"
@@ -131,7 +152,11 @@ def train_model(request):
         evaluation = ModelEvaluation.objects.create(**evaluation_data)
         
         # Generate charts
-        charts = ml_service.generate_charts(df, target_column, trained_model, y_test, y_pred)
+        try:
+            charts = ml_service.generate_charts(df, target_column, trained_model, y_test, y_pred)
+        except Exception as e:
+            print(f"Warning: Chart generation failed: {e}")
+            charts = {}
         
         return Response({
             'model_id': model.id,
@@ -146,8 +171,12 @@ def train_model(request):
         
     except Dataset.DoesNotExist:
         return Response({'error': 'Dataset not found'}, status=status.HTTP_404_NOT_FOUND)
+    except ValueError as e:
+        return Response({'error': f'Model training error: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+    except KeyError as e:
+        return Response({'error': f'Unsupported model type: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'error': f'Internal server error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
 def get_model_metrics(request, model_id):
