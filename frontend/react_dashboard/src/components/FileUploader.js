@@ -156,7 +156,7 @@ function FileUploader({ onUpload }) {
               />
             </div>
 
-            <div className="form-group">
+            {/* <div className="form-group">
               <label htmlFor="description">Description</label>
               <textarea
                 id="description"
@@ -165,7 +165,7 @@ function FileUploader({ onUpload }) {
                 placeholder="Enter dataset description"
                 rows="3"
               />
-            </div>
+            </div> */}
 
             <div className="form-group">
               <label htmlFor="targetColumn">Target Column</label>

@@ -92,10 +92,10 @@ function EDAView({ dataset, onClose, onTrainModel, onCompareModels }) {
   const getModelsForProblemType = (type) => {
     const classificationModels = [
       { value: 'random_forest', label: 'Random Forest' },
-      { value: 'xgboost', label: 'XGBoost' },
-      { value: 'lightgbm', label: 'LightGBM' },
+      // { value: 'xgboost', label: 'XGBoost' },
+      // { value: 'lightgbm', label: 'LightGBM' },
       { value: 'catboost', label: 'CatBoost' },
-      { value: 'logistic_regression', label: 'Logistic Regression' },
+      // { value: 'logistic_regression', label: 'Logistic Regression' },
       { value: 'svm', label: 'Support Vector Machine' },
       { value: 'knn', label: 'K-Nearest Neighbors' },
       { value: 'decision_tree', label: 'Decision Tree' },
@@ -105,8 +105,8 @@ function EDAView({ dataset, onClose, onTrainModel, onCompareModels }) {
 
     const regressionModels = [
       { value: 'random_forest', label: 'Random Forest' },
-      { value: 'xgboost', label: 'XGBoost' },
-      { value: 'lightgbm', label: 'LightGBM' },
+      // { value: 'xgboost', label: 'XGBoost' },
+      // { value: 'lightgbm', label: 'LightGBM' },
       { value: 'catboost', label: 'CatBoost' },
       { value: 'linear_regression', label: 'Linear Regression' },
       { value: 'ridge', label: 'Ridge Regression' },
@@ -250,12 +250,12 @@ function EDAView({ dataset, onClose, onTrainModel, onCompareModels }) {
                 >
                   Train Single Model
                 </button>
-                <button 
+                {/* <button 
                   className="btn-secondary"
                   onClick={() => setShowCompareForm(true)}
                 >
                   Compare Models
-                </button>
+                </button> */}
               </div>
             </div>
           </div>

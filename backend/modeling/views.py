@@ -14,6 +14,7 @@ from .models import MLModel, ModelEvaluation, ModelComparison
 from ingestion.models import Dataset
 from preprocessing.models import PreprocessedDataset
 from .services import MLService
+from django.utils import timezone
 
 ml_service = MLService()
 
@@ -136,7 +137,7 @@ def train_model(request):
         
         # Update model record
         model.model_file = model_path
-        model.training_completed = datetime.now()
+        model.training_completed = timezone.now()
         model.training_duration = training_time
         model.status = 'completed'
         model.save()
@@ -370,7 +371,7 @@ def compare_models(request):
                 target_column=target_column,
                 feature_columns=feature_columns,
                 status='completed',
-                training_completed=datetime.now(),
+                training_completed=timezone.now(),
                 training_duration=training_time
             )
             

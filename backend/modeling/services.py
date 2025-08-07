@@ -53,6 +53,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 import json
+from django.utils import timezone
 from .llm_router import ModelSelectionService
 
 class MLService:
@@ -431,7 +432,7 @@ class MLService:
         model_class = self.models[problem_type][model_name]
         model = model_class(**hyperparameters)
         
-        start_time = datetime.now()
+        start_time = timezone.now()
         try:
             model.fit(X_train, y_train)
         except Exception as e:
@@ -447,7 +448,7 @@ class MLService:
             else:
                 raise e
         
-        training_time = (datetime.now() - start_time).total_seconds()
+        training_time = (timezone.now() - start_time).total_seconds()
         
         return model, training_time
     

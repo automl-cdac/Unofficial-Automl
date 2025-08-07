@@ -266,9 +266,9 @@ function Dashboard() {
                     <button onClick={() => setSelectedDataset(dataset)}>
                       View Details
                     </button>
-                    <button onClick={() => handleGenerateReport('data_analysis', dataset.id)}>
+                    {/* <button onClick={() => handleGenerateReport('data_analysis', dataset.id)}>
                       Generate Report
-                    </button>
+                    </button> */}
                     <button 
                       className="chatbot-btn"
                       onClick={() => {
@@ -347,9 +347,9 @@ function Dashboard() {
                   )}
                   <p>{report.summary}</p>
                   <div className="report-actions">
-                    <button onClick={() => setSelectedReport(report)}>
-                      View Report
-                    </button>
+                    {/* <button onClick={() => setSelectedReport(report)}> */}
+                      {/* View Report */}
+                    {/* </button> */}
                   </div>
                 </div>
               ))}
